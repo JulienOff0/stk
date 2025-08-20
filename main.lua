@@ -1,6 +1,6 @@
 --[[
-   🔥 Premium Loader - Speed + ESP (UI fix + ESP intact)
-   Touche: "$" (Shift+4) • F2 secours
+   🔥 Premium Loader - Speed + ESP (UI align + hide fix)
+   Touche: "$" (Shift+4) • F2 • Insert • RightCtrl
 ]]
 
 if _G.__PREMIUM_MENU_LOADED then return end
@@ -44,7 +44,7 @@ safeParent(UI)
 
 local Main = Instance.new("Frame")
 Main.Name = "Main"
-Main.Size = UDim2.fromOffset(400, 320) -- un peu plus large
+Main.Size = UDim2.fromOffset(430, 340) -- un peu plus grand
 Main.BackgroundColor3 = Color3.fromRGB(18,18,20)
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -85,14 +85,29 @@ Title.Parent = Header
 local Hint = Instance.new("TextLabel")
 Hint.BackgroundTransparency = 1
 Hint.AnchorPoint = Vector2.new(1,0)
-Hint.Position = UDim2.new(1,-12,0,10)
-Hint.Size = UDim2.fromOffset(180, 24)
+Hint.Position = UDim2.new(1,-42,0,10) -- laisse la place au bouton hide
+Hint.Size = UDim2.fromOffset(220, 24)
 Hint.Font = Enum.Font.Gotham
 Hint.TextSize = 14
 Hint.TextXAlignment = Enum.TextXAlignment.Right
 Hint.TextColor3 = Color3.fromRGB(180,180,190)
-Hint.Text = 'Touche: "$" (⇧+4)  •  F2'
+Hint.Text = 'Touche: "$" (⇧+4) • F2 • Insert • RightCtrl'
 Hint.Parent = Header
+
+-- bouton hide UI (clic)
+local HideBtn = Instance.new("TextButton")
+HideBtn.AnchorPoint = Vector2.new(1,0)
+HideBtn.Position = UDim2.new(1,-10,0,8)
+HideBtn.Size = UDim2.fromOffset(28,28)
+HideBtn.Text = "✕"
+HideBtn.TextSize = 18
+HideBtn.Font = Enum.Font.GothamBold
+HideBtn.TextColor3 = Color3.fromRGB(230,230,235)
+HideBtn.AutoButtonColor = false
+HideBtn.BackgroundColor3 = Color3.fromRGB(60,60,68)
+HideBtn.Parent = Header
+Instance.new("UICorner", HideBtn).CornerRadius = UDim.new(1,0)
+Instance.new("UIStroke", HideBtn).Transparency = 0.35
 
 local Sep = Instance.new("Frame")
 Sep.BackgroundColor3 = Color3.fromRGB(45,45,52)
@@ -113,7 +128,7 @@ VList.SortOrder = Enum.SortOrder.LayoutOrder
 -- helpers
 local function makeCard(titleText, subtitleText, height)
 	local Card = Instance.new("Frame")
-	Card.Size = UDim2.new(1, 0, 0, height or 130)
+	Card.Size = UDim2.new(1, 0, 0, height or 140)
 	Card.BackgroundColor3 = Color3.fromRGB(24,24,28)
 	Card.BorderSizePixel = 0
 	Card.Active = true
@@ -139,7 +154,7 @@ local function makeCard(titleText, subtitleText, height)
 	ST.TextColor3 = Color3.fromRGB(170,170,182)
 	ST.Text = subtitleText or ""
 	ST.Position = UDim2.fromOffset(12,30)
-	ST.Size = UDim2.fromOffset(360,18)
+	ST.Size = UDim2.fromOffset(390,18)
 	ST.Parent = Card
 
 	return Card, T, ST
@@ -174,8 +189,8 @@ end
 local function makeSlider(parent, title, minV, maxV, defaultV, onChanged)
 	local Wrap = Instance.new("Frame")
 	Wrap.BackgroundTransparency = 1
-	Wrap.Position = UDim2.fromOffset(12, 52) -- sous le sous-titre
-	Wrap.Size = UDim2.new(1, -24, 0, 56)
+	Wrap.Position = UDim2.fromOffset(12, 56)
+	Wrap.Size = UDim2.new(1, -24, 0, 60)
 	Wrap.Parent = parent
 
 	local T = Instance.new("TextLabel")
@@ -192,7 +207,7 @@ local function makeSlider(parent, title, minV, maxV, defaultV, onChanged)
 	local Bar = Instance.new("Frame")
 	Bar.BackgroundColor3 = Color3.fromRGB(45,45,55)
 	Bar.BorderSizePixel = 0
-	Bar.Position = UDim2.fromOffset(0,24)
+	Bar.Position = UDim2.fromOffset(0,26)
 	Bar.Size = UDim2.new(1,0,0,8)
 	Bar.Parent = Wrap
 	Instance.new("UICorner", Bar).CornerRadius = UDim.new(0,6)
@@ -246,51 +261,54 @@ local function makeSlider(parent, title, minV, maxV, defaultV, onChanged)
 end
 
 -- ===== Speed card =====
-local SpeedCard, _, ST1 = makeCard("Speed", "Sprint constant (anti-reset + respawn)", 140)
-SpeedCard.Parent = Content
-local SpeedToggle, setSpeedToggle = makeToggle(SpeedCard, false)
-local SpeedSlider = makeSlider(SpeedCard, "Vitesse", S.minSpeed, S.maxSpeed, S.speed, function(v) S.speed = v end)
+local SpeedCard = (function()
+	local Card = select(1, makeCard("Speed", "Sprint constant (anti-reset + respawn)", 150))
+	Card.Parent = Content
+	local Toggle, setT = makeToggle(Card, false)
+	makeSlider(Card, "Vitesse", S.minSpeed, S.maxSpeed, S.speed, function(v) S.speed = v end)
 
-SpeedToggle.MouseButton1Click:Connect(function()
-	S.speedEnabled = not S.speedEnabled
-	setSpeedToggle(S.speedEnabled)
-	if S.speedEnabled then
-		local h = getHum(); S.humanoid = h; S.normalSpeed = h.WalkSpeed
-		if S.con.hb then S.con.hb:Disconnect() end
-		if S.con.anti then S.con.anti:Disconnect() end
-		S.con.hb = RS.Heartbeat:Connect(function()
-			if S.speedEnabled and S.humanoid and S.humanoid.Parent and S.humanoid.WalkSpeed ~= S.speed then
-				S.humanoid.WalkSpeed = S.speed
-			end
-		end)
-		S.con.anti = h:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
-			if S.speedEnabled and h.WalkSpeed ~= S.speed then h.WalkSpeed = S.speed end
-		end)
-	else
-		if S.con.hb then S.con.hb:Disconnect() S.con.hb=nil end
-		if S.con.anti then S.con.anti:Disconnect() S.con.anti=nil end
-		local h = S.humanoid or (getChar():FindFirstChildOfClass("Humanoid"))
-		if h then h.WalkSpeed = S.normalSpeed or 16 end
-	end
-end)
-LP.CharacterAdded:Connect(function() if S.speedEnabled then task.wait(.3); local h=getHum(); S.humanoid=h; S.normalSpeed=h.WalkSpeed end end)
+	Toggle.MouseButton1Click:Connect(function()
+		S.speedEnabled = not S.speedEnabled
+		setT(S.speedEnabled)
+		if S.speedEnabled then
+			local h = getHum(); S.humanoid = h; S.normalSpeed = h.WalkSpeed
+			if S.con.hb then S.con.hb:Disconnect() end
+			if S.con.anti then S.con.anti:Disconnect() end
+			S.con.hb = RS.Heartbeat:Connect(function()
+				if S.speedEnabled and S.humanoid and S.humanoid.Parent and S.humanoid.WalkSpeed ~= S.speed then
+					S.humanoid.WalkSpeed = S.speed
+				end
+			end)
+			S.con.anti = h:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+				if S.speedEnabled and h.WalkSpeed ~= S.speed then h.WalkSpeed = S.speed end
+			end)
+		else
+			if S.con.hb then S.con.hb:Disconnect() S.con.hb=nil end
+			if S.con.anti then S.con.anti:Disconnect() S.con.anti=nil end
+			local h = S.humanoid or (getChar():FindFirstChildOfClass("Humanoid"))
+			if h then h.WalkSpeed = S.normalSpeed or 16 end
+		end
+	end)
+	LP.CharacterAdded:Connect(function() if S.speedEnabled then task.wait(.3); local h=getHum(); S.humanoid=h; S.normalSpeed=h.WalkSpeed end end)
+	return Card
+end)()
 
 -- ===== ESP card =====
 local ESPCard = (function()
-	local Card, _, _ = makeCard("ESP Player", "Boxes, Names, Team Colors, Tracers", 170)
+	local Card = select(1, makeCard("ESP Player", "Boxes, Names, Team Colors, Tracers", 200)) -- hauteur ↑
 	Card.Parent = Content
 	local Toggle, setT = makeToggle(Card, false)
 
-	-- grille d’options
+	-- grille 2 colonnes propre
 	local GridWrap = Instance.new("Frame")
 	GridWrap.BackgroundTransparency = 1
 	GridWrap.Position = UDim2.fromOffset(12, 56)
-	GridWrap.Size = UDim2.new(1, -24, 0, 88)
+	GridWrap.Size = UDim2.new(1, -24, 0, 110)
 	GridWrap.Parent = Card
 
 	local Grid = Instance.new("UIGridLayout", GridWrap)
-	Grid.CellSize = UDim2.fromOffset(180, 28) -- 2 colonnes sur 400px
-	Grid.CellPadding = UDim2.fromOffset(10, 8)
+	Grid.CellSize = UDim2.fromOffset(200, 32)      -- large cellules
+	Grid.CellPadding = UDim2.fromOffset(14, 10)    -- padding généreux
 	Grid.FillDirectionMaxCells = 2
 	Grid.HorizontalAlignment = Enum.HorizontalAlignment.Left
 	Grid.SortOrder = Enum.SortOrder.LayoutOrder
@@ -298,22 +316,22 @@ local ESPCard = (function()
 	local function mini(label, def, cb)
 		local Item = Instance.new("Frame")
 		Item.BackgroundTransparency = 1
-		Item.Size = UDim2.fromOffset(180,28)
+		Item.Size = UDim2.fromOffset(200,32)
 
 		local L = Instance.new("TextLabel")
 		L.BackgroundTransparency = 1
 		L.Font = Enum.Font.Gotham
-		L.TextSize = 13
+		L.TextSize = 14
 		L.TextXAlignment = Enum.TextXAlignment.Left
 		L.TextColor3 = Color3.fromRGB(200,200,210)
 		L.Text = label
-		L.Position = UDim2.fromOffset(0,5)
-		L.Size = UDim2.fromOffset(100,18)
+		L.Position = UDim2.fromOffset(0,6)
+		L.Size = UDim2.fromOffset(110,20)
 		L.Parent = Item
 
 		local Btn, setOn = makeToggle(Item, def)
-		Btn.Position = UDim2.new(1,-56,0,0) -- reste dans la cellule
-		Btn.Size = UDim2.fromOffset(56,24)
+		Btn.Position = UDim2.new(1,-64,0,4) -- à l'intérieur de la cellule
+		Btn.Size = UDim2.fromOffset(64,24)
 		Btn.MouseButton1Click:Connect(function()
 			def = not def
 			setOn(def); if cb then cb(def) end
@@ -323,15 +341,14 @@ local ESPCard = (function()
 		return function(on) def=on; setOn(on); if cb then cb(on) end end
 	end
 
-	local setBoxes   = mini("Boxes",   S.esp.Boxes,      function(v) S.esp.Boxes=v;      _G.WRDESPBoxes=v end)
-	local setNames   = mini("Names",   S.esp.Names,      function(v) S.esp.Names=v;      _G.WRDESPNames=v end)
-	local setTeams   = mini("Team Colors", S.esp.TeamColors, function(v) S.esp.TeamColors=v; _G.WRDESPTeamColors=v end)
-	local setTracers = mini("Tracers", S.esp.Tracers,    function(v) S.esp.Tracers=v;    _G.WRDESPTracers=v end)
+	local setBoxes   = mini("Boxes",        S.esp.Boxes,      function(v) S.esp.Boxes=v;      _G.WRDESPBoxes=v end)
+	local setNames   = mini("Names",        S.esp.Names,      function(v) S.esp.Names=v;      _G.WRDESPNames=v end)
+	local setTeams   = mini("Team Colors",  S.esp.TeamColors, function(v) S.esp.TeamColors=v; _G.WRDESPTeamColors=v end)
+	local setTracers = mini("Tracers",      S.esp.Tracers,    function(v) S.esp.Tracers=v;    _G.WRDESPTracers=v end)
 
-	-- init visibles
+	-- init
 	setBoxes(S.esp.Boxes); setNames(S.esp.Names); setTeams(S.esp.TeamColors); setTracers(S.esp.Tracers)
 
-	-- toggle principal
 	Toggle.MouseButton1Click:Connect(function()
 		S.espWanted = not S.espWanted
 		setT(S.espWanted)
@@ -382,16 +399,23 @@ UIS.InputChanged:Connect(function(io)
 	if io.UserInputType == Enum.UserInputType.MouseMovement then updateDrag(io) end
 end)
 
--- ===== Toggle UI ($ + F2) =====
+-- ===== Toggle UI ($ + F2 + Insert + RightCtrl) =====
 local function toggleUI()
 	S.uiVisible = not S.uiVisible
 	UI.Enabled = S.uiVisible
 end
-UIS.InputBegan:Connect(function(io,gp)
-	if gp then return end
+
+HideBtn.MouseButton1Click:Connect(toggleUI)
+
+UIS.InputBegan:Connect(function(io)
+	-- si on tape dans un TextBox (chat/rename), on ignore pour éviter les surprises
+	if UIS:GetFocusedTextBox() then return end
 	if io.UserInputType == Enum.UserInputType.Keyboard then
 		local shift = UIS:IsKeyDown(Enum.KeyCode.LeftShift) or UIS:IsKeyDown(Enum.KeyCode.RightShift)
-		if (io.KeyCode == Enum.KeyCode.Four and shift) or io.KeyCode == Enum.KeyCode.F2 then
+		if (shift and io.KeyCode == Enum.KeyCode.Four) -- "$"
+		or io.KeyCode == Enum.KeyCode.F2
+		or io.KeyCode == Enum.KeyCode.Insert
+		or io.KeyCode == Enum.KeyCode.RightControl then
 			toggleUI()
 		end
 	end
@@ -405,7 +429,7 @@ _G.WRDESPTracers    = S.esp.Tracers
 _G.WRDESPNames      = S.esp.Names
 
 local WRD_ESP_CODE = [===[
--- Kiriot/WRD ESP PATCH (identique à ta version qui marchait)
+-- Kiriot/WRD ESP PATCH (identique)
 if not _G.WRDESPLoaded then    
     local ESP = {
         Enabled = false, Boxes = true,
@@ -558,7 +582,7 @@ if not _G.WRDESPLoaded then
         while task.wait(0.12) do
             ESP:Toggle(_G.WRDESPEnabled or false)
             ESP.Boxes     = _G.WRDESPBoxes or false
-            ESP.TeamColor = _G.WRDESPTeamColors or false -- patch
+            ESP.TeamColor = _G.WRDESPTeamColors or false
             ESP.Tracers   = _G.WRDESPTracers or false
             ESP.Names     = _G.WRDESPNames or false
         end
@@ -575,4 +599,4 @@ function ensureESP()
 	f(); S.espLoaded = true
 end
 
-print('[Premium Hub] OK. "$" (⇧+4) pour cacher/montrer, F2 secours.')
+print('[Premium Hub] OK. "$" (⇧+4) / F2 / Insert / RightCtrl pour cacher/montrer.')
